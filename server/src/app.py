@@ -4,18 +4,15 @@ from PredictionModel import time_series_predict
 from werkzeug.contrib.fixers import ProxyFix
 import os
 
-from server.src.SentimentModule import predictPositiveSentiProba
+from SentimentModule import predictPositiveSentiProba
 from sklearn.externals import joblib
 
-from server.src.StreakModule import streakDataAnalyze
+from StreakModule import streakDataAnalyze
 
 app = Flask(__name__)
 api = Api(app)
 ns = api.namespace('AnalysisScripts', description='Select Appropriate Endpoints')
 app.wsgi_app = ProxyFix(app.wsgi_app)
-
-SentiVectorizer = joblib.load('SentiVectorizer.pkl')
-SentiClassifier = joblib.load('SentiClassifier.pkl')
 
 TimeSeriesPredModel = ns.model("Model for Time Series Prediction",
                                {"data":
@@ -35,10 +32,12 @@ StreakAnalyzerModel = ns.model("Model for Analyzing Streak Data",
                                        fields.List(fields.String, description="List of Streak data as a List",
                                                    required=True),
                                    "analyzeEle":
-                                       fields.String(description="Streak Data to be Analyzed for which Data element",default="Yes")
+                                       fields.String(description="Streak Data to be Analyzed for which Data element",
+                                                     default="Yes")
                                })
 
-
+SentiVectorizer = joblib.load('SentiVectorizer.pkl')
+SentiClassifier = joblib.load('SentiClassifier.pkl')
 @ns.route('/hello')
 class HelloWorld(Resource):
     def get(self):
@@ -60,7 +59,7 @@ class SentiAnalyzer(Resource):
     @ns.expect(SentiAnalyzerModel)
     def post(self):
         json_data = request.json
-        return predictPositiveSentiProba(json_data['text'], SentiVectorizer, SentiClassifier)
+        return predictPositiveSentiProba(json_data['text'],SentiVectorizer,SentiClassifier)
 
 
 @ns.route('/StreakAnalyzer')
@@ -76,10 +75,10 @@ class StreakAnalyzer(Resource):
 
         '''
         json_data = request.json
-        op=streakDataAnalyze(json_data['data'], json_data['analyzeEle'])
+        op = streakDataAnalyze(json_data['data'], json_data['analyzeEle'])
         return op
 
 
 if __name__ == '__main__':
-    # app.run(debug=True,host='0.0.0.0',port=int(os.environ.get('PORT', 8080))) # For Google Cloud Run Deployment
-    app.run(debug=True)  # For Local PyCharm
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
+    #app.run(debug=True)  # For Local PyCharm
