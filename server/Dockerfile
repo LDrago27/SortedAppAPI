@@ -10,9 +10,9 @@ RUN pip install Werkzeug==0.16.1
 RUN pip install Flask-Gunicorn
 RUN pip install flask-restplus
 RUN pip install statsmodels
-RUN pip install scikit-learn
+RUN pip install scikit-learn==0.21
 RUN pip install nltk
-
+RUN pip install gensim
 # 4
 ENV PORT 8080
 

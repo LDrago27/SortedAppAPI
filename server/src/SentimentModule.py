@@ -9,7 +9,6 @@ import re
 import string
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from sklearn.externals import joblib
 
 st = set(stopwords.words('english'))
 
