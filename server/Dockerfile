@@ -19,6 +19,7 @@ RUN pip install gcloud
 RUN pip install sseclient
 RUN pip install pycryptodome==3.4.3
 RUN pip install requests-toolbelt
+RUN pip install xlrd==1.2.0
 # 4
 ENV PORT 8080
 

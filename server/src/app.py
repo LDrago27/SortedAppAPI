@@ -129,14 +129,22 @@ class TextSummarizer(Resource):
         else:
             keyword_count = 20
         op_dict = {}
-        res = summaryAndKeywords(json_data["text"],word2vecModel, word_count, keyword_count)
-        op_dict["summary"] = res[0]
-        op_dict["keywords"] = res[1]
-        op_dict["tags"] = res[2]
+        if keyword_count<10 or word_count<40:
+            op_dict["summary"] = ""
+            op_dict["keywords"] = ""
+            op_dict["tags"] = ""
+            op_dict["error"] = "Invalid Input Keywords_count should be more than 10 and word count more than 40"
+        else:
+            res = summaryAndKeywords(json_data["text"],word2vecModel, word_count, keyword_count)
+            op_dict["summary"] = res[0]
+            op_dict["keywords"] = res[1]
+            process_tags=[[str(ele1),ele2] for ele1,ele2 in res[2]]
+            op_dict["tags"] = process_tags
+            op_dict["error"] =""
         return op_dict
 
 
 
 if __name__ == '__main__':
-    #app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
-    app.run(debug=True)  # For Local PyCharm
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
+    #app.run(debug=True)  # For Local PyCharm
