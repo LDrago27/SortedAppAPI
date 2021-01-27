@@ -1,3 +1,4 @@
+import gensim
 from flask import Flask, request
 from flask_restplus import Api, Resource, fields
 from PredictionModel import time_series_predict
@@ -6,15 +7,20 @@ import os
 
 from SentimentModule import predictPositiveSentiProba
 from sklearn.externals import joblib
+# import joblib
+
 
 from StreakModule import streakDataAnalyze
 
 from SummarizationModule import summaryAndKeywords
 
+from BaseRequestEnums import RequestType
+
 app = Flask(__name__)
 api = Api(app)
 ns = api.namespace('AnalysisScripts', description='Select Appropriate Endpoints')
 app.wsgi_app = ProxyFix(app.wsgi_app)
+word2vecModel = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
 
 TimeSeriesPredModel = ns.model("Model for Time Series Prediction",
                                {"data":
@@ -47,6 +53,22 @@ TextSummazrizerModel = ns.model("Model for Text Summarizzation",
                                         description="Enter keyword word count default is 20 ")
 
                                 })
+BaseApiRequestModel=ns.model("Model for BASEAPICONTROLLER",
+                             {
+                                 "Request Type":fields.Integer(description="Request Type Refer to API contract",
+                                                          default="Yes"),
+                                 "UserID":fields.String(description="USERID"),
+                                 "Periodicity":fields.Integer(description="Periodicity Enum Refer to API contract"),
+                                 "QuestionID":fields.Integer(description="QuestionID"),
+                                 "ActivityID":fields.Integer(description="ActivityID Valid only for Activity type questions"),
+                                 "StartDate":fields.String(description="Start Date"),
+                                 "EndDate":fields.String(description="End Date"),
+                                 "NextN_Prediction":fields.Integer(description="Future Prediction of n days"),
+                                 "Streak_Payload_for_hours":fields.String(description="JSON PAyload"),
+                                 "Write_Payload:":fields.String(description="JSON PAyload")
+                             }
+                             )
+
 
 SentiVectorizer = joblib.load('SentiVectorizer.pkl')
 SentiClassifier = joblib.load('SentiClassifier.pkl')
@@ -107,12 +129,14 @@ class TextSummarizer(Resource):
         else:
             keyword_count = 20
         op_dict = {}
-        res = summaryAndKeywords(json_data["text"], word_count, keyword_count)
+        res = summaryAndKeywords(json_data["text"],word2vecModel, word_count, keyword_count)
         op_dict["summary"] = res[0]
         op_dict["keywords"] = res[1]
+        op_dict["tags"] = res[2]
         return op_dict
 
 
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
-    # app.run(debug=True)  # For Local PyCharm
+    #app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
+    app.run(debug=True)  # For Local PyCharm
