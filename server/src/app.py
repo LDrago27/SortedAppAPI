@@ -4,7 +4,7 @@ from flask_restplus import Api, Resource, fields
 from PredictionModel import time_series_predict
 from werkzeug.contrib.fixers import ProxyFix
 import os
-
+import gensim.downloader as apiGensim
 from SentimentModule import predictPositiveSentiProba
 from sklearn.externals import joblib
 # import joblib
@@ -12,7 +12,7 @@ from sklearn.externals import joblib
 
 from StreakModule import streakDataAnalyze
 
-from SummarizationModule import summaryAndKeywords
+from SummarizationModule import summaryAndKeywords, getTagList, cosine_sim
 
 from BaseRequestEnums import RequestType
 
@@ -20,7 +20,7 @@ app = Flask(__name__)
 api = Api(app)
 ns = api.namespace('AnalysisScripts', description='Select Appropriate Endpoints')
 app.wsgi_app = ProxyFix(app.wsgi_app)
-word2vecModel = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin', binary=True)
+word2vecModel = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True,limit=50000)
 
 TimeSeriesPredModel = ns.model("Model for Time Series Prediction",
                                {"data":
@@ -135,15 +135,32 @@ class TextSummarizer(Resource):
             op_dict["tags"] = ""
             op_dict["error"] = "Invalid Input Keywords_count should be more than 10 and word count more than 40"
         else:
-            res = summaryAndKeywords(json_data["text"],word2vecModel, word_count, keyword_count)
+            res = summaryAndKeywords(json_data["text"], word_count, keyword_count)
             op_dict["summary"] = res[0]
             op_dict["keywords"] = res[1]
-            process_tags=[[str(ele1),ele2] for ele1,ele2 in res[2]]
+            relevantTag = getRelevantTag(res[1])
+            process_tags=[[str(ele1),ele2] for ele1,ele2 in relevantTag]
             op_dict["tags"] = process_tags
             op_dict["error"] =""
         return op_dict
 
-
+def getRelevantTag(keyword):
+    tag_list = getTagList();
+    tag_score_list = []
+    for word in keyword:
+        for tag in tag_list:
+            netscore = 0
+            count = 0
+            for tagword in tag.split():
+                if tagword in word2vecModel.vocab and word in word2vecModel.vocab:
+                    score = cosine_sim(word2vecModel[tagword], word2vecModel[word])
+                    netscore += score
+                    count += 1
+            if count:
+                netscore = netscore / count
+            tag_score_list.append([score, tag])
+    tag_score_list.sort(reverse=True)
+    return tag_score_list[:5]
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
