@@ -4,11 +4,10 @@ from flask_restplus import Api, Resource, fields
 from PredictionModel import time_series_predict
 from werkzeug.contrib.fixers import ProxyFix
 import os
-import gensim.downloader as apiGensim
 from SentimentModule import predictPositiveSentiProba
 from sklearn.externals import joblib
 # import joblib
-
+from flask_cors import CORS, cross_origin
 
 from StreakModule import streakDataAnalyze
 
@@ -17,7 +16,9 @@ from SummarizationModule import summaryAndKeywords, getTagList, cosine_sim
 from BaseRequestEnums import RequestType
 
 app = Flask(__name__)
+CORS(app)
 api = Api(app)
+
 ns = api.namespace('AnalysisScripts', description='Select Appropriate Endpoints')
 app.wsgi_app = ProxyFix(app.wsgi_app)
 word2vecModel = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True,limit=50000)
