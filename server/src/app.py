@@ -182,5 +182,5 @@ def text2vec(text):
 
 
 if __name__ == '__main__':
-    # app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
-    app.run(debug=True)  # For Local PyCharm
+    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
+    # app.run(debug=True)  # For Local PyCharm
