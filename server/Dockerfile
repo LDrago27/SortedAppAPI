@@ -21,6 +21,9 @@ RUN pip install pycryptodome==3.4.3
 RUN pip install requests-toolbelt
 RUN pip install xlrd==1.2.0
 RUN pip install -U flask-cors
+RUN python -m nltk.downloader punkt
+RUN python -m nltk.downloader stopwords
+RUN python -m nltk.downloader wordnet
 RUN wget -c "https://s3.amazonaws.com/dl4j-distribution/GoogleNews-vectors-negative300.bin.gz"
 #RUN gzip -d GoogleNews-vectors-negative300.bin.gz
 # 4
