@@ -1,9 +1,13 @@
+import string
+
 from gensim.summarization import summarize
 from gensim.summarization import keywords
 import gensim
 import numpy as np
 import pandas as pd
-
+from nltk import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 
 def summaryAndKeywords(text, word_count=80, keyword_count=20):
     summary = summarize(text, word_count=word_count)
@@ -15,6 +19,31 @@ def summaryAndKeywords(text, word_count=80, keyword_count=20):
 def cosine_sim(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
+
+
+def cleantext(text):
+    st = set(stopwords.words('english'))
+    remove_digits = str.maketrans('', '', string.digits)
+    text = text.translate(remove_digits)
+
+    # remove punctuation
+    table = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+    strip = text.translate(table)
+
+    # Tokenizer
+    tokens = word_tokenize(strip)
+
+    # Convert into lower case
+    proc_text = [w.lower() for w in tokens]
+
+    # Remove stopwords
+    proc_text = [word for word in proc_text if word not in st]
+
+    # Storing only Lemmmatized words
+    lemmatizer = WordNetLemmatizer()
+    lemma_text = [lemmatizer.lemmatize(word) for word in proc_text]
+
+    return " ".join(lemma_text)
 
 def getTagList():
     xls = pd.ExcelFile('Usertagging.xlsx')

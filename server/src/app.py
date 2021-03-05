@@ -3,17 +3,12 @@ from flask import Flask, request
 from flask_restplus import Api, Resource, fields
 from PredictionModel import time_series_predict
 from werkzeug.contrib.fixers import ProxyFix
-import os
 from SentimentModule import predictPositiveSentiProba
 from sklearn.externals import joblib
-# import joblib
 from flask_cors import CORS, cross_origin
-
 from StreakModule import streakDataAnalyze
-
-from SummarizationModule import summaryAndKeywords, getTagList, cosine_sim
-
-from BaseRequestEnums import RequestType
+from SummarizationModule import summaryAndKeywords, getTagList, cosine_sim, cleantext
+import numpy as np
 
 app = Flask(__name__)
 CORS(app)
@@ -21,7 +16,8 @@ api = Api(app)
 
 ns = api.namespace('AnalysisScripts', description='Select Appropriate Endpoints')
 app.wsgi_app = ProxyFix(app.wsgi_app)
-word2vecModel = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True,limit=50000)
+word2vecModel = gensim.models.KeyedVectors.load_word2vec_format('GoogleNews-vectors-negative300.bin.gz', binary=True,
+                                                                limit=50000)
 
 TimeSeriesPredModel = ns.model("Model for Time Series Prediction",
                                {"data":
@@ -54,22 +50,22 @@ TextSummazrizerModel = ns.model("Model for Text Summarizzation",
                                         description="Enter keyword word count default is 20 ")
 
                                 })
-BaseApiRequestModel=ns.model("Model for BASEAPICONTROLLER",
-                             {
-                                 "Request Type":fields.Integer(description="Request Type Refer to API contract",
-                                                          default="Yes"),
-                                 "UserID":fields.String(description="USERID"),
-                                 "Periodicity":fields.Integer(description="Periodicity Enum Refer to API contract"),
-                                 "QuestionID":fields.Integer(description="QuestionID"),
-                                 "ActivityID":fields.Integer(description="ActivityID Valid only for Activity type questions"),
-                                 "StartDate":fields.String(description="Start Date"),
-                                 "EndDate":fields.String(description="End Date"),
-                                 "NextN_Prediction":fields.Integer(description="Future Prediction of n days"),
-                                 "Streak_Payload_for_hours":fields.String(description="JSON PAyload"),
-                                 "Write_Payload:":fields.String(description="JSON PAyload")
-                             }
-                             )
-
+BaseApiRequestModel = ns.model("Model for BASEAPICONTROLLER",
+                               {
+                                   "Request Type": fields.Integer(description="Request Type Refer to API contract",
+                                                                  default="Yes"),
+                                   "UserID": fields.String(description="USERID"),
+                                   "Periodicity": fields.Integer(description="Periodicity Enum Refer to API contract"),
+                                   "QuestionID": fields.Integer(description="QuestionID"),
+                                   "ActivityID": fields.Integer(
+                                       description="ActivityID Valid only for Activity type questions"),
+                                   "StartDate": fields.String(description="Start Date"),
+                                   "EndDate": fields.String(description="End Date"),
+                                   "NextN_Prediction": fields.Integer(description="Future Prediction of n days"),
+                                   "Streak_Payload_for_hours": fields.String(description="JSON PAyload"),
+                                   "Write_Payload:": fields.String(description="JSON PAyload")
+                               }
+                               )
 
 SentiVectorizer = joblib.load('SentiVectorizer.pkl')
 SentiClassifier = joblib.load('SentiClassifier.pkl')
@@ -130,7 +126,7 @@ class TextSummarizer(Resource):
         else:
             keyword_count = 20
         op_dict = {}
-        if keyword_count<10 or word_count<40:
+        if keyword_count < 10 or word_count < 40:
             op_dict["summary"] = ""
             op_dict["keywords"] = ""
             op_dict["tags"] = ""
@@ -139,30 +135,52 @@ class TextSummarizer(Resource):
             res = summaryAndKeywords(json_data["text"], word_count, keyword_count)
             op_dict["summary"] = res[0]
             op_dict["keywords"] = res[1]
-            relevantTag = getRelevantTag(res[1])
-            process_tags=[[str(ele1),ele2] for ele1,ele2 in relevantTag]
+            relevantTag = getRelevantTag(json_data["text"])
+            process_tags = [[str(ele1), ele2] for ele1, ele2 in relevantTag]
             op_dict["tags"] = process_tags
-            op_dict["error"] =""
+            op_dict["error"] = ""
         return op_dict
 
-def getRelevantTag(keyword):
-    tag_list = getTagList();
+
+# Private functions
+def getRelevantTag(text):
+    textvec = text2vec(cleantext(text))
+    if textvec is None:
+        return None
+    tag_list = getTagList()
     tag_score_list = []
-    for word in keyword:
-        for tag in tag_list:
-            netscore = 0
-            count = 0
-            for tagword in tag.split():
-                if tagword in word2vecModel.vocab and word in word2vecModel.vocab:
-                    score = cosine_sim(word2vecModel[tagword], word2vecModel[word])
-                    netscore += score
-                    count += 1
-            if count:
-                netscore = netscore / count
-            tag_score_list.append([netscore, tag])
+    for tag in tag_list:
+        netscore = 0
+        count = 0
+        for tagword in tag.split():
+            if tagword in word2vecModel.vocab:
+                score = cosine_sim(word2vecModel[tagword], textvec)
+                netscore += score
+                count += 1
+        if count:
+            netscore = netscore / count
+        tag_score_list.append([netscore, tag])
+
     tag_score_list.sort(reverse=True)
     return tag_score_list[:5]
 
+
+def text2vec(text):
+    count = 0
+    net = None
+    for word in text.split():
+        if word in word2vecModel.vocab:
+            count += 1
+            if net is None:
+                net = word2vecModel[word]
+            else:
+                net = np.add(net,word2vecModel[word])
+
+    if count:
+        net = net / count
+    return net
+
+
 if __name__ == '__main__':
-    #app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
+    # app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))  # For Google Cloud Run Deployment
     app.run(debug=True)  # For Local PyCharm
