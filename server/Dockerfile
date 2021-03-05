@@ -21,6 +21,7 @@ RUN pip install pycryptodome==3.4.3
 RUN pip install requests-toolbelt
 RUN pip install xlrd==1.2.0
 RUN pip install -U flask-cors
+RUN pip install textblob
 RUN python -m nltk.downloader punkt
 RUN python -m nltk.downloader stopwords
 RUN python -m nltk.downloader wordnet

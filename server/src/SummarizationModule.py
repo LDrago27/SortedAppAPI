@@ -2,7 +2,7 @@ import string
 
 from gensim.summarization import summarize
 from gensim.summarization import keywords
-import gensim
+import nltk
 import numpy as np
 import pandas as pd
 from nltk import word_tokenize
@@ -22,6 +22,7 @@ def cosine_sim(a, b):
 
 
 def cleantext(text):
+    nltk.download('wordnet')
     st = set(stopwords.words('english'))
     remove_digits = str.maketrans('', '', string.digits)
     text = text.translate(remove_digits)
